@@ -44,9 +44,9 @@ export default function ImportExport({ state, setState, aktywnyEvent, zawodnicy 
     eksportujPDF(zawodnicyEventu, aktywnyEvent);
   };
 
-  const handleExcel = () => {
+  const handleExcel = async () => {
     if (!aktywnyEvent) { alert('Brak aktywnego eventu'); return; }
-    eksportujExcel(zawodnicyEventu, aktywnyEvent);
+    await eksportujExcel(zawodnicyEventu, aktywnyEvent);
   };
 
   return (
