@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { obliczMiejsca } from '../utils/sortowanie';
 
-export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kraje, aktywnyEvent }) {
+export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kraje, aktywnyEvent, stoperBiega, stoperSekund, onStopZawodnik }) {
   const [filtryDystans, setFiltryDystans] = useState('');
   const [filtryKategoria, setFiltryKategoria] = useState('');
   const [filtryKraj, setFiltryKraj] = useState('');
@@ -34,13 +34,13 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
   };
 
   return (
-    <div>
+    <div className="dark:text-white">
       <div className="mb-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-1">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-1">
           {aktywnyEvent ? aktywnyEvent.nazwa : 'Brak aktywnego eventu'}
         </h2>
         {aktywnyEvent && (
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
             {aktywnyEvent.miejscowosc} | {aktywnyEvent.data}
           </p>
         )}
@@ -51,7 +51,7 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
         <select
           value={filtryDystans}
           onChange={e => setFiltryDystans(e.target.value)}
-          className="border rounded px-2 py-1 text-sm"
+          className="border rounded px-2 py-1 text-sm dark:bg-gray-700 dark:text-white dark:border-gray-600"
         >
           <option value="">Wszystkie dystanse</option>
           {dystanse.map(d => <option key={d} value={d}>{d}</option>)}
@@ -59,7 +59,7 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
         <select
           value={filtryKategoria}
           onChange={e => setFiltryKategoria(e.target.value)}
-          className="border rounded px-2 py-1 text-sm"
+          className="border rounded px-2 py-1 text-sm dark:bg-gray-700 dark:text-white dark:border-gray-600"
         >
           <option value="">Wszystkie kategorie</option>
           {kategorie.map(k => <option key={k} value={k}>{k}</option>)}
@@ -67,7 +67,7 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
         <select
           value={filtryKraj}
           onChange={e => setFiltryKraj(e.target.value)}
-          className="border rounded px-2 py-1 text-sm"
+          className="border rounded px-2 py-1 text-sm dark:bg-gray-700 dark:text-white dark:border-gray-600"
         >
           <option value="">Wszystkie kraje</option>
           {kraje.map(k => <option key={k} value={k}>{k}</option>)}
@@ -75,7 +75,7 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
         <select
           value={filtryKlub}
           onChange={e => setFiltryKlub(e.target.value)}
-          className="border rounded px-2 py-1 text-sm"
+          className="border rounded px-2 py-1 text-sm dark:bg-gray-700 dark:text-white dark:border-gray-600"
         >
           <option value="">Wszystkie kluby</option>
           {kluby.map(k => <option key={k} value={k}>{k}</option>)}
@@ -83,7 +83,7 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
         {(filtryDystans || filtryKategoria || filtryKraj || filtryKlub) && (
           <button
             onClick={() => { setFiltryDystans(''); setFiltryKategoria(''); setFiltryKraj(''); setFiltryKlub(''); }}
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-blue-600 hover:underline dark:text-blue-400"
           >
             Wyczyść filtry
           </button>
@@ -91,9 +91,9 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
       </div>
 
       {!aktywnyEvent ? (
-        <div className="text-gray-500 text-center py-10">Ustaw aktywny event w zakładce Eventy</div>
+        <div className="text-gray-500 dark:text-gray-400 text-center py-10">Ustaw aktywny event w zakładce Eventy</div>
       ) : zawodnicyFiltered.length === 0 ? (
-        <div className="text-gray-500 text-center py-10">Brak zawodników dla wybranych filtrów</div>
+        <div className="text-gray-500 dark:text-gray-400 text-center py-10">Brak zawodników dla wybranych filtrów</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
@@ -106,13 +106,14 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
                 <th className="px-3 py-2 text-left">Klub/Szkoła [Kraj]</th>
                 <th className="px-3 py-2 text-left">Z/M</th>
                 <th className="px-3 py-2 text-left">Czas</th>
+                <th className="px-3 py-2 text-left">STOP</th>
               </tr>
             </thead>
             <tbody>
               {zawodnicyFiltered.map((z, idx) => (
                 <tr
                   key={z.id}
-                  className={`border-b ${z.dnf ? 'text-gray-400 italic' : medalStyle(z.miejsceOgolne)} ${!z.dnf && !medalStyle(z.miejsceOgolne) && idx % 2 === 1 ? 'bg-gray-50' : ''}`}
+                  className={`border-b dark:border-gray-600 ${z.dnf ? 'text-gray-400 italic' : medalStyle(z.miejsceOgolne)} ${!z.dnf && !medalStyle(z.miejsceOgolne) && idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-700' : 'dark:bg-gray-800'}`}
                 >
                   <td className="px-3 py-1.5">{z.dnf ? '—' : z.miejsceOgolne}</td>
                   <td className="px-3 py-1.5">{z.nrStartowy}</td>
@@ -123,13 +124,29 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
                   </td>
                   <td className="px-3 py-1.5">{z.dnf ? '—' : z.miejsceKategoria}</td>
                   <td className="px-3 py-1.5 font-mono">{z.dnf ? 'DNF' : (z.czas || '—')}</td>
+                  <td className="px-3 py-1.5">
+                    {!z.dnf && (
+                      z.czas ? (
+                        <span className="text-green-600 text-xs font-mono">✅ {z.czas}</span>
+                      ) : (
+                        <button
+                          disabled={!stoperBiega}
+                          onClick={() => onStopZawodnik && onStopZawodnik(z.id, stoperSekund)}
+                          className="px-2 py-0.5 bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs rounded"
+                        >
+                          STOP
+                        </button>
+                      )
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="text-xs text-gray-400 mt-2">Łącznie: {zawodnicyFiltered.length} zawodników</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Łącznie: {zawodnicyFiltered.length} zawodników</p>
         </div>
       )}
     </div>
   );
 }
+

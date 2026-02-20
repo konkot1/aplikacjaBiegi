@@ -9,6 +9,7 @@ import KrajeManager from './components/KrajeManager';
 import EventyManager from './components/EventyManager';
 import ImportExport from './components/ImportExport';
 import Modal from './components/Modal';
+import Stoper from './components/Stoper';
 
 const DOMYSLNE_DANE = {
   kategorie: ['M16-19','M20-29','M30-39','M40-49','M50-59','M60-69','M70+','K16-19','K20-29','K30-39','K40-49','K50-59','K60-69','K70+'],
@@ -30,9 +31,19 @@ function ladujDane() {
   return DOMYSLNE_DANE;
 }
 
+function formatCzas(sekundy) {
+  const h = Math.floor(sekundy / 3600);
+  const m = Math.floor((sekundy % 3600) / 60);
+  const s = sekundy % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export default function App() {
   const [zakladka, setZakladka] = useState('wyniki');
   const [state, setState] = useState(ladujDane);
+  const [ciemnyTryb, setCiemnyTryb] = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [stoperSekund, setStoperSekund] = useState(0);
+  const [stoperBiega, setStoperBiega] = useState(() => localStorage.getItem('stoper-running') === 'true');
 
   // Destructure state
   const { kategorie, kraje, dystanse, kluby, eventy, aktywnyEventId, zawodnicy } = state;
@@ -45,6 +56,12 @@ export default function App() {
       console.error('localStorage error:', e);
     }
   }, [state]);
+
+  // Dark mode effect
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', ciemnyTryb);
+    localStorage.setItem('darkMode', String(ciemnyTryb));
+  }, [ciemnyTryb]);
 
   // Helper setters
   const setKategorie = (v) => setState(s => ({ ...s, kategorie: typeof v === 'function' ? v(s.kategorie) : v }));
@@ -96,30 +113,40 @@ export default function App() {
     setZawodnicy(prev => prev.filter(zaw => zaw.id !== id));
   };
 
+  const zapiszCzasZawodnika = (zawodnikId, sekundy) => {
+    setZawodnicy(prev => prev.map(z => z.id === zawodnikId ? { ...z, czas: formatCzas(sekundy) } : z));
+  };
+
   const zawodnicyEventu = zawodnicy.filter(z => z.eventId === aktywnyEventId);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Navbar aktywnaZakladka={zakladka} setAktywnaZakladka={setZakladka} />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:bg-gray-900 dark:from-gray-900 dark:to-gray-800 transition-colors">
+      <Navbar aktywnaZakladka={zakladka} setAktywnaZakladka={setZakladka} ciemnyTryb={ciemnyTryb} setCiemnyTryb={setCiemnyTryb} />
       
       <main className="max-w-7xl mx-auto px-4 py-6">
+        <Stoper onTick={(sek) => setStoperSekund(sek)} onRunningChange={(r) => setStoperBiega(r)} />
         {zakladka === 'wyniki' && (
-          <WynikTabela
-            zawodnicy={zawodnicy}
-            dystanse={dystanse}
-            kategorie={kategorie}
-            kluby={kluby}
-            kraje={kraje}
-            aktywnyEvent={aktywnyEvent}
-          />
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <WynikTabela
+              zawodnicy={zawodnicy}
+              dystanse={dystanse}
+              kategorie={kategorie}
+              kluby={kluby}
+              kraje={kraje}
+              aktywnyEvent={aktywnyEvent}
+              stoperBiega={stoperBiega}
+              stoperSekund={stoperSekund}
+              onStopZawodnik={zapiszCzasZawodnika}
+            />
+          </div>
         )}
 
         {zakladka === 'zawodnicy' && (
-          <div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                 Zawodnicy
-                {aktywnyEvent && <span className="text-sm font-normal text-gray-500 ml-2">— {aktywnyEvent.nazwa}</span>}
+                {aktywnyEvent && <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">— {aktywnyEvent.nazwa}</span>}
               </h2>
               <button
                 onClick={otworzDodaj}
@@ -133,9 +160,9 @@ export default function App() {
               <div className="text-orange-600 text-sm mb-4">⚠️ Brak aktywnego eventu. Przejdź do zakładki Eventy i ustaw aktywny event.</div>
             )}
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse bg-white rounded shadow">
+              <table className="w-full text-sm border-collapse bg-white dark:bg-gray-800 rounded shadow">
                 <thead>
-                  <tr className="bg-gray-100 text-gray-700 border-b">
+                  <tr className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-b dark:border-gray-600">
                     <th className="px-3 py-2 text-left">Nr</th>
                     <th className="px-3 py-2 text-left">Imię i Nazwisko</th>
                     <th className="px-3 py-2 text-left">Kat.</th>
@@ -145,21 +172,37 @@ export default function App() {
                     <th className="px-3 py-2 text-left">Kraj</th>
                     <th className="px-3 py-2 text-left">Czas</th>
                     <th className="px-3 py-2 text-left">DNF</th>
+                    <th className="px-3 py-2 text-left">STOP</th>
                     <th className="px-3 py-2 text-left">Akcje</th>
                   </tr>
                 </thead>
                 <tbody>
                   {zawodnicyEventu.map((z, idx) => (
-                    <tr key={z.id} className={`border-b ${idx % 2 === 1 ? 'bg-gray-50' : ''} hover:bg-blue-50`}>
-                      <td className="px-3 py-1.5">{z.nrStartowy}</td>
-                      <td className="px-3 py-1.5 font-medium">{z.imieNazwisko}</td>
-                      <td className="px-3 py-1.5">{z.kategoria}</td>
-                      <td className="px-3 py-1.5">{z.plec}</td>
-                      <td className="px-3 py-1.5">{z.dystans}</td>
-                      <td className="px-3 py-1.5">{z.klub}</td>
-                      <td className="px-3 py-1.5">{z.kraj}</td>
-                      <td className="px-3 py-1.5 font-mono">{z.dnf ? 'DNF' : z.czas}</td>
-                      <td className="px-3 py-1.5">{z.dnf ? '✓' : ''}</td>
+                    <tr key={z.id} className={`border-b dark:border-gray-600 ${idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-700' : 'dark:bg-gray-800'} hover:bg-blue-50 dark:hover:bg-gray-600`}>
+                      <td className="px-3 py-1.5 dark:text-gray-200">{z.nrStartowy}</td>
+                      <td className="px-3 py-1.5 font-medium dark:text-gray-200">{z.imieNazwisko}</td>
+                      <td className="px-3 py-1.5 dark:text-gray-200">{z.kategoria}</td>
+                      <td className="px-3 py-1.5 dark:text-gray-200">{z.plec}</td>
+                      <td className="px-3 py-1.5 dark:text-gray-200">{z.dystans}</td>
+                      <td className="px-3 py-1.5 dark:text-gray-200">{z.klub}</td>
+                      <td className="px-3 py-1.5 dark:text-gray-200">{z.kraj}</td>
+                      <td className="px-3 py-1.5 font-mono dark:text-gray-200">{z.dnf ? 'DNF' : z.czas}</td>
+                      <td className="px-3 py-1.5 dark:text-gray-200">{z.dnf ? '✓' : ''}</td>
+                      <td className="px-3 py-1.5">
+                        {!z.dnf && (
+                          z.czas ? (
+                            <span className="text-green-600 text-xs font-mono">✅ {z.czas}</span>
+                          ) : (
+                            <button
+                              disabled={!stoperBiega}
+                              onClick={() => zapiszCzasZawodnika(z.id, stoperSekund)}
+                              className="px-2 py-0.5 bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs rounded"
+                            >
+                              STOP
+                            </button>
+                          )
+                        )}
+                      </td>
                       <td className="px-3 py-1.5">
                         <div className="flex gap-2">
                           <button onClick={() => otworzEdycje(z)} className="text-blue-600 hover:underline text-xs">Edytuj</button>
@@ -170,7 +213,7 @@ export default function App() {
                   ))}
                   {zawodnicyEventu.length === 0 && (
                     <tr>
-                      <td colSpan={10} className="px-3 py-8 text-center text-gray-400">
+                      <td colSpan={11} className="px-3 py-8 text-center text-gray-400">
                         Brak zawodników. Kliknij "+ Dodaj zawodnika" aby dodać pierwszego.
                       </td>
                     </tr>
