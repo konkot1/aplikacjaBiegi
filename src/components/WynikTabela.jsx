@@ -26,6 +26,17 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
     return filtered;
   }, [zawodnicyZMiejscami, filtryKategoria, filtryKraj, filtryKlub]);
 
+  const zawodnicyDoWyswietlenia = useMemo(() => {
+    if (!stoperBiega) return zawodnicyFiltered;
+    return [...zawodnicyFiltered].sort((a, b) => {
+      const aCzas = a.czas || a.dnf;
+      const bCzas = b.czas || b.dnf;
+      if (!aCzas && bCzas) return -1;
+      if (aCzas && !bCzas) return 1;
+      return 0;
+    });
+  }, [zawodnicyFiltered, stoperBiega]);
+
   const medalStyle = (miejsce) => {
     if (miejsce === 1) return 'bg-yellow-100 font-bold';
     if (miejsce === 2) return 'bg-gray-100 font-bold';
@@ -110,7 +121,7 @@ export default function WynikTabela({ zawodnicy, dystanse, kategorie, kluby, kra
               </tr>
             </thead>
             <tbody>
-              {zawodnicyFiltered.map((z, idx) => (
+              {zawodnicyDoWyswietlenia.map((z, idx) => (
                 <tr
                   key={z.id}
                   className={`border-b dark:border-gray-600 ${z.dnf ? 'text-gray-400 italic' : medalStyle(z.miejsceOgolne)} ${!z.dnf && !medalStyle(z.miejsceOgolne) && idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-700' : 'dark:bg-gray-800'}`}

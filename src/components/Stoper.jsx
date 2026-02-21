@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-function formatCzas(sekundy) {
-  const h = Math.floor(sekundy / 3600);
-  const m = Math.floor((sekundy % 3600) / 60);
-  const s = sekundy % 60;
-  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+function formatCzas(cs) {
+  const h = Math.floor(cs / 360000);
+  const m = Math.floor((cs % 360000) / 6000);
+  const s = Math.floor((cs % 6000) / 100);
+  const c = cs % 100;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(c).padStart(2, '0')}`;
 }
 
 export default function Stoper({ onTick, onRunningChange }) {
@@ -13,7 +14,7 @@ export default function Stoper({ onTick, onRunningChange }) {
     const saved = parseInt(localStorage.getItem('stoper-elapsed') || '0', 10);
     const startTimestamp = parseInt(localStorage.getItem('stoper-startTimestamp') || '0', 10);
     if (localStorage.getItem('stoper-running') === 'true' && startTimestamp) {
-      return saved + Math.floor((Date.now() - startTimestamp) / 1000);
+      return saved + Math.floor((Date.now() - startTimestamp) / 10);
     }
     return saved;
   });
@@ -30,7 +31,7 @@ export default function Stoper({ onTick, onRunningChange }) {
           if (onTick) onTick(next);
           return next;
         });
-      }, 1000);
+      }, 10);
     } else {
       clearInterval(intervalRef.current);
       localStorage.removeItem('stoper-startTimestamp');
