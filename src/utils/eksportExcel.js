@@ -98,13 +98,14 @@ ${strings.map(s => `<si><t xml:space="preserve">${escapeXml(s)}</t></si>`).join(
 export async function eksportujExcel(zawodnicy, event) {
   const nazwaEventu = event ? event.nazwa : 'Wyniki';
 
-  const headers = ['Mce', 'Nr', 'Imię i Nazwisko', 'Kat.', 'Klub/Szkoła [Kraj]', 'Z/M', 'Czas'];
+  const headers = ['Mce', 'Nr', 'Imię i Nazwisko', 'Kat.', 'Dystans', 'Klub/Szkoła [Kraj]', 'Z/M', 'Czas'];
 
   const rows = zawodnicy.map(z => [
     z.dnf ? 'DNF' : String(z.miejsceOgolne ?? ''),
     String(z.nrStartowy ?? ''),
     z.imieNazwisko ?? '',
     z.kategoria ?? '',
+    z.dystans ?? '',
     z.klub ? `${z.klub} [${z.kraj || 'POL'}]` : (z.kraj || 'POL'),
     z.dnf ? 'DNF' : String(z.miejsceKategoria ?? ''),
     z.dnf ? 'DNF' : (z.czas || ''),

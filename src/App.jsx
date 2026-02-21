@@ -31,18 +31,19 @@ function ladujDane() {
   return DOMYSLNE_DANE;
 }
 
-function formatCzas(sekundy) {
-  const h = Math.floor(sekundy / 3600);
-  const m = Math.floor((sekundy % 3600) / 60);
-  const s = sekundy % 60;
-  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+function formatCzas(cs) {
+  const h = Math.floor(cs / 360000);
+  const m = Math.floor((cs % 360000) / 6000);
+  const s = Math.floor((cs % 6000) / 100);
+  const c = cs % 100;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(c).padStart(2, '0')}`;
 }
 
 export default function App() {
   const [zakladka, setZakladka] = useState('wyniki');
   const [state, setState] = useState(ladujDane);
   const [ciemnyTryb, setCiemnyTryb] = useState(() => localStorage.getItem('darkMode') === 'true');
-  const [stoperSekund, setStoperSekund] = useState(0);
+  const [stoperCs, setStoperCs] = useState(0);
   const [stoperBiega, setStoperBiega] = useState(() => localStorage.getItem('stoper-running') === 'true');
 
   // Destructure state
@@ -94,6 +95,20 @@ export default function App() {
   };
 
   const zapiszZawodnika = (dane) => {
+    if (dane.nrStartowy) {
+      const eventId = edytowanyZawodnik ? edytowanyZawodnik.eventId : aktywnyEventId;
+      const konflikt = zawodnicy.find(z =>
+        z.eventId === eventId &&
+        String(z.nrStartowy) === String(dane.nrStartowy) &&
+        z.kategoria === dane.kategoria &&
+        z.dystans === dane.dystans &&
+        z.id !== (edytowanyZawodnik?.id)
+      );
+      if (konflikt) {
+        alert(`Nr startowy ${dane.nrStartowy} jest już zajęty w kategorii "${dane.kategoria}" na dystansie "${dane.dystans}".\nZawodnik: ${konflikt.imieNazwisko}`);
+        return;
+      }
+    }
     if (edytowanyZawodnik) {
       setZawodnicy(prev => prev.map(z => z.id === edytowanyZawodnik.id ? { ...z, ...dane } : z));
     } else {
@@ -113,8 +128,18 @@ export default function App() {
     setZawodnicy(prev => prev.filter(zaw => zaw.id !== id));
   };
 
-  const zapiszCzasZawodnika = (zawodnikId, sekundy) => {
-    setZawodnicy(prev => prev.map(z => z.id === zawodnikId ? { ...z, czas: formatCzas(sekundy) } : z));
+  const zapiszCzasZawodnika = (zawodnikId, cs) => {
+    setZawodnicy(prev => {
+      const zaktualizowani = prev.map(z =>
+        z.id === zawodnikId ? { ...z, czas: formatCzas(cs) } : z
+      );
+      const idx = zaktualizowani.findIndex(z => z.id === zawodnikId);
+      if (idx !== -1) {
+        const [zawodnik] = zaktualizowani.splice(idx, 1);
+        zaktualizowani.push(zawodnik);
+      }
+      return zaktualizowani;
+    });
   };
 
   const zawodnicyEventu = zawodnicy.filter(z => z.eventId === aktywnyEventId);
@@ -124,7 +149,7 @@ export default function App() {
       <Navbar aktywnaZakladka={zakladka} setAktywnaZakladka={setZakladka} ciemnyTryb={ciemnyTryb} setCiemnyTryb={setCiemnyTryb} />
       
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <Stoper onTick={(sek) => setStoperSekund(sek)} onRunningChange={(r) => setStoperBiega(r)} />
+        <Stoper onTick={(cs) => setStoperCs(cs)} onRunningChange={(r) => setStoperBiega(r)} />
         {zakladka === 'wyniki' && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <WynikTabela
@@ -135,7 +160,7 @@ export default function App() {
               kraje={kraje}
               aktywnyEvent={aktywnyEvent}
               stoperBiega={stoperBiega}
-              stoperSekund={stoperSekund}
+              stoperSekund={stoperCs}
               onStopZawodnik={zapiszCzasZawodnika}
             />
           </div>
@@ -195,7 +220,7 @@ export default function App() {
                           ) : (
                             <button
                               disabled={!stoperBiega}
-                              onClick={() => zapiszCzasZawodnika(z.id, stoperSekund)}
+                              onClick={() => zapiszCzasZawodnika(z.id, stoperCs)}
                               className="px-2 py-0.5 bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs rounded"
                             >
                               STOP
@@ -258,6 +283,10 @@ export default function App() {
           />
         )}
       </main>
+
+      <footer className="text-center text-xs text-gray-400 dark:text-gray-600 py-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+        © Miłosz P.
+      </footer>
 
       <Modal
         isOpen={modalOpen}
